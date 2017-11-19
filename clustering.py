@@ -1,13 +1,16 @@
 import json
 
 try:
-    from sklearn.cluster import KMeans
-    from sklearn.metrics.pairwise import pairwise_distances_argmin
+    from sklearn.cluster import KMeans, SpectralClustering, MiniBatchKMeans, estimate_bandwidth, MeanShift, AffinityPropagation, AgglomerativeClustering, DBSCAN, Birch
+    from sklearn.neighbors import kneighbors_graph
+    from sklearn.mixture import GaussianMixture
+
     import numpy as np
 except:
     import unzip_requirements
-    from sklearn.cluster import KMeans
-    from sklearn.metrics.pairwise import pairwise_distances_argmin
+    from sklearn.cluster import KMeans, SpectralClustering, MiniBatchKMeans, estimate_bandwidth, MeanShift, AffinityPropagation, AgglomerativeClustering, DBSCAN, Birch
+    from sklearn.neighbors import kneighbors_graph
+    from sklearn.mixture import GaussianMixture
     import numpy as np
 
 def main(event, context):
@@ -26,13 +29,54 @@ def main(event, context):
         lng = float(address['location']['lng'])
         X = np.append(X, [[lat, lng]], axis=0)
 
-    n_clusters = 2
-    k_means = KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
-    k_means.fit(X)
-    k_means_cluster_centers = np.sort(k_means.cluster_centers_, axis=0)
-    k_means_labels = pairwise_distances_argmin(X, k_means_cluster_centers)
+    n_clusters = 2;
+    if ('clusters' in body):
+        n_clusters = body['clusters']
 
-    prediction = k_means.predict(X)
+    algoName = 'kmeans'
+    if ('algo' in body):
+        algoName = body['algo']
+        if algoName == 'spectral':
+            algo = SpectralClustering(n_clusters=n_clusters, eigen_solver='arpack', affinity='nearest_neighbors')
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'minikmeans':
+            algo = MiniBatchKMeans(init='k-means++', n_clusters=n_clusters, n_init=10, max_no_improvement=10, verbose=0)
+            algo.fit(X)
+            prediction = algo.predict(X)
+        if algoName == 'meanshift':
+            bandwidth = estimate_bandwidth(X, quantile=0.3)
+            algo = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'affinity':
+            algo = AffinityPropagation(damping=0.8)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'agglo':
+            connectivity = kneighbors_graph(X, n_neighbors=2, include_self=False)
+            algo = AgglomerativeClustering(linkage='average', affinity='cityblock', n_clusters=n_clusters, connectivity=connectivity)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'birch':
+            algo = Birch(n_clusters=n_clusters, threshold=0.1, branching_factor=10)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'gaussian':
+            algo = GaussianMixture(n_components=n_clusters, covariance_type='full')
+            algo.fit(X)
+            prediction = algo.predict(X)
+        else:
+            algo = KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
+            algo.fit(X)
+            prediction = algo.predict(X)
+    else:
+        algo = KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
+        prediction = algo.predict(X)
+
+
+
+
     print(prediction)
 
     clusterData = []
@@ -49,7 +93,7 @@ def main(event, context):
     
     dataWithMetaData = {
         'clusters': n_clusters,
-        'algo': 'k_means',
+        'algo': algoName,
         'addresses': len(dataObject),
         'clusterData': clusterData
     }
@@ -109,13 +153,41 @@ if __name__ == '__main__':
                 'lat': 9,
                 'lng': 4,
             }
+        },
+        {
+            'address': '10 to 3',
+            'location': {
+                'lat': 15,
+                'lng': 12,
+            }
+        },
+        {
+            'address': '11 to 5',
+            'location': {
+                'lat': 16,
+                'lng': 13,
+            }
+        },
+        {
+            'address': '9 to 4',
+            'location': {
+                'lat': 17,
+                'lng': 14,
+            }
+        },
+        {
+            'address': '9 to 4',
+            'location': {
+                'lat': 30,
+                'lng': 14,
+            }
         }
     ]
     body = {
-        'algo': 'predict',
-        'data': json.dumps(data)
+        'algo': 'gaussian',
+        'clusters': 3,
+        'data': data
     }
     testEvent = {}
-    testEvent['body'] = json.dumps(body);
-    print(json.dumps(testEvent, indent=4))
-    # print(json.dumps(main(testEvent, ''), indent=4))
+    testEvent['body'] = json.dumps(body)
+    print(json.dumps(main(testEvent, ''), indent=4))
