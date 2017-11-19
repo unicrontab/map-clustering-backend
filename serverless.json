@@ -1,0 +1,60 @@
+{
+    "service": "map-cluster-backend",
+    "frameworkVersion": ">=1.1.0 <2.0.0",
+    "package": {
+        "exclude": [
+            "node_modules/**",
+            "venv/**",
+            ".vscode/**",
+            "__pycache__/**",
+            "package*.json",
+            "README.md",
+            "test/**",
+            "buildspec.yml",
+            "requirements.txt",
+            ".requirements-cache"
+        ]
+    },
+    "plugins": [
+        "serverless-python-requirements"
+    ],
+    "custom": {
+        "pythonRequirements": {
+            "zip": true,
+            "dockerizePip": true,
+            "noDeploy": [
+                "boto3"
+            ],
+            "pipCmdExtraArgs": [
+                "--cache-dir",
+                ".requirements-cache"
+            ]
+        }
+    },
+    "provider": {
+        "name": "aws",
+        "stage": "dev",
+        "region": "us-west-2",
+        "runtime": "python3.6"
+    },
+    "functions": {
+        "clusterAddresses": {
+            "runtime": "python3.6",
+            "memorySize": 1024,
+            "timeout": 15,
+            "environment": {
+                "DEBUG": "false"
+            },
+            "handler": "clustering.main",
+            "events": [
+                {
+                    "http": {
+                        "path": "cluster/",
+                        "method": "post",
+                        "cors": "false"
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,4 @@
+.requirements.zip
+.requirements-cache
+.serverless
+node_modules

@@ -1,0 +1,15 @@
+{
+  "name": "map-cluster-backend",
+  "version": "1.0.0",
+  "description": "python serverless deployment for learning api endpoints",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "serverless": "^1.24.1",
+    "serverless-python-requirements": "^3.0.10"
+  }
+}
