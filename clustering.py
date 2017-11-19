@@ -1,11 +1,16 @@
 import json
 
 try:
-    from sklearn.cluster import KMeans, SpectralClustering
+    from sklearn.cluster import KMeans, SpectralClustering, MiniBatchKMeans, estimate_bandwidth, MeanShift, AffinityPropagation, AgglomerativeClustering, DBSCAN, Birch
+    from sklearn.neighbors import kneighbors_graph
+    from sklearn.mixture import GaussianMixture
+
     import numpy as np
 except:
     import unzip_requirements
-    from sklearn.cluster import KMeans, SpectralClustering
+    from sklearn.cluster import KMeans, SpectralClustering, MiniBatchKMeans, estimate_bandwidth, MeanShift, AffinityPropagation, AgglomerativeClustering, DBSCAN, Birch
+    from sklearn.neighbors import kneighbors_graph
+    from sklearn.mixture import GaussianMixture
     import numpy as np
 
 def main(event, context):
@@ -35,6 +40,32 @@ def main(event, context):
             algo = SpectralClustering(n_clusters=n_clusters, eigen_solver='arpack', affinity='nearest_neighbors')
             algo.fit(X)
             prediction = algo.labels_.astype(np.int)
+        if algoName == 'minikmeans':
+            algo = MiniBatchKMeans(init='k-means++', n_clusters=n_clusters, n_init=10, max_no_improvement=10, verbose=0)
+            algo.fit(X)
+            prediction = algo.predict(X)
+        if algoName == 'meanshift':
+            bandwidth = estimate_bandwidth(X, quantile=0.3)
+            algo = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'affinity':
+            algo = AffinityPropagation(damping=0.8)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'agglo':
+            connectivity = kneighbors_graph(X, n_neighbors=2, include_self=False)
+            algo = AgglomerativeClustering(linkage='average', affinity='cityblock', n_clusters=n_clusters, connectivity=connectivity)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'birch':
+            algo = Birch(n_clusters=n_clusters, threshold=0.1, branching_factor=10)
+            algo.fit(X)
+            prediction = algo.labels_.astype(np.int)
+        if algoName == 'gaussian':
+            algo = GaussianMixture(n_components=n_clusters, covariance_type='full')
+            algo.fit(X)
+            prediction = algo.predict(X)
         else:
             algo = KMeans(init='k-means++', n_clusters=n_clusters, n_init=10)
             algo.fit(X)
@@ -153,10 +184,10 @@ if __name__ == '__main__':
         }
     ]
     body = {
-        'algo': 'kmeans',
+        'algo': 'gaussian',
         'clusters': 3,
         'data': data
     }
     testEvent = {}
-    testEvent['body'] = json.dumps(body);
+    testEvent['body'] = json.dumps(body)
     print(json.dumps(main(testEvent, ''), indent=4))
